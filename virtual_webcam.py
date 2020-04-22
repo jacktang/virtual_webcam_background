@@ -162,6 +162,8 @@ def mainloop():
     part_segmentation = to_mask_tensor(part_heatmaps, 0.999)
     part_segmentation = tf.dtypes.cast(part_segmentation, tf.int32)
     part_segmentation = np.array(part_segmentation)
+    # reshape array to [part_idx][:,:]
+    part_segmentation = np.moveaxis(part_segmentation, 2, 0)
 
     # Average over the last N masks to reduce flickering
     # (at the cost of seeing afterimages)
@@ -246,7 +248,10 @@ def mainloop():
     overlays = load_images(overlays, config.get("overlay_image", ""),
         height, width, "overlays", data)
 
-    face_mask = np.bitwise_or(part_segmentation[:,:,0], part_segmentation[:,:,1])
+    face_mask = np.bitwise_or(
+        part_segmentation[0,:,:],
+        part_segmentation[1,:,:]
+    )
     if config.get("halo", False) and (face_mask > 0).any():
         center_of_mass = np.array(ndimage.center_of_mass(face_mask))
 
@@ -301,7 +306,7 @@ def mainloop():
     if config.get("debug_show_mask", None) is not None:
         mask_id = config.get("debug_show_mask")
         if mask_id >-1 and mask_id < 24:
-            mask = part_segmentation[:,:,mask_id]
+            mask = part_segmentation[mask_id]
         frame[:,:,0] = mask * 255
         frame[:,:,1] = mask * 255
         frame[:,:,2] = mask * 255
